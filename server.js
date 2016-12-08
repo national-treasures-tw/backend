@@ -46,7 +46,7 @@ router.route('/vision')
     });
   })
 
-
+app.use(router);
 
 
 
