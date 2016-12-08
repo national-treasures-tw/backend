@@ -8,11 +8,19 @@ var router = express.Router();
 //Set our port to either a predetermined port number if you have set it up, or 3001
 var port = process.env.PORT || 3001;
 var router = express.Router();
+var fs = require('fs');
 
+fs.writeFile('/tmp/key.json', process.env.GOOGLE_KEY, function(err) {
+    if(err) {
+        return console.log(err);
+    }
+
+    console.log("The file was saved!");
+}); 
 // Google Vision API
 var vision = require('@google-cloud/vision')({
   projectId: 'national-treasure-148700',
-  keyFilename: 'https://s3.amazonaws.com/natinoal-treasure/national-treasure-adff284fabe9.json'
+  keyFilename: '/tmp/key.json'
   // credentials: {
   //   client_email: process.env.GOOGLE_CLIENT_EMAIL,
   //   private_key: process.env.GOOGLE_PRIVATE_KEY
