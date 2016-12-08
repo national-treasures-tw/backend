@@ -12,7 +12,7 @@ var router = express.Router();
 // Google Vision API
 var vision = require('@google-cloud/vision')({
   projectId: 'national-treasure-148700',
-  // Set environment variable to key.json path
+  keyFilename: './key/national-treasure-adff284fabe9.json'
 });
 
 //Configure the API to use bodyParser and look for JSON data in the request body
