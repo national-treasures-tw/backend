@@ -12,6 +12,7 @@ var router = express.Router();
 // Google Vision API
 var vision = require('@google-cloud/vision')({
   projectId: 'national-treasure-148700',
+  keyFilename: 'https://s3.amazonaws.com/natinoal-treasure/national-treasure-adff284fabe9.json'
   // credentials: {
   //   client_email: process.env.GOOGLE_CLIENT_EMAIL,
   //   private_key: process.env.GOOGLE_PRIVATE_KEY
