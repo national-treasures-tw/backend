@@ -42,6 +42,8 @@ router.route('/vision')
       //   faces: [...],
       //   labels: [...]
       // }
+      console.log(detections);
+      console.log(err);
       res.send(detections);
     });
   })
