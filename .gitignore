@@ -4,3 +4,10 @@ node_modules/
 
 npm-debug.log
 *.DS_Store
+
+// secret stuff
+*.json
+
+
+// zip file for lambda
+*.zip
