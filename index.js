@@ -10,7 +10,15 @@ const s3 = new AWS.S3({
   apiVersion: '2006-03-01', // lock in specific version of the SDK
   signatureVersion: 'v4', // S3 requires the "v4" signatureVersion to enable KMS server side encryption
 });
+const dynamo = new AWS.DynamoDB.DocumentClient();
 const bucketName = process.env.IMAGE_BUCKET_NAME;
+const dynamoTable = process.env.TABLE_NAME;
+
+const getUIDFromS3Key = (key) => {
+  const keyArray = key.split('-');
+  const arayWithTimestampRemoved = keyArray.splice(0, keyArray.length - 1).join('-').split('/');
+  return arayWithTimestampRemoved[arayWithTimestampRemoved.length - 1];
+};
 
 const getOCR = (event, callback) => {
   const imageKey = event.Records[0].s3.object.key;
@@ -19,20 +27,31 @@ const getOCR = (event, callback) => {
       Bucket: bucketName,
       Key: imageKey
     };
+    const uid = getUIDFromS3Key(imageKey);
+
     console.log(s3Params);
     s3.getObject(s3Params).promise()
     .then((data) => {
       console.log(data);
       vision.detectText(data.Body, function(err, detections) {
         if (err) {
-          console.log('error');
           console.log(err);
+        } else {
+          // save OCR results in image database (dynamodb)
+          return dynamo.update({
+            Key: { uid },
+            TableName: dynamoTable,
+            ReturnValues: 'ALL_NEW',
+            ExpressionAttributeNames: { "#DK": 'ocr' },
+            ExpressionAttributeValues: { ":d": detections },
+            UpdateExpression: 'SET #DK = :d'
+          }).promise()
         }
-        console.log('no error');
-        console.log(detections);
-        callback(null, detections);
+
       });
     })
+    .then(() => callback(null, { success: true }))
+    .catch(err => callback(err));
   } else {
     console.log('new S3 object is not an image! No OCR for you');
   }
