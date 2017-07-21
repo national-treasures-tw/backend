@@ -1,28 +1,74 @@
 const AWS = require('aws-sdk');
 const uuidV1 = require('uuid/v1');
+const sharp = require('sharp');
 const dynamoTable = process.env.TABLE_NAME;
 const s3 = new AWS.S3({
   apiVersion: '2006-03-01', // lock in specific version of the SDK
   signatureVersion: 'v4', // S3 requires the "v4" signatureVersion to enable KMS server side encryption
 });
 const dynamo = new AWS.DynamoDB.DocumentClient();
-const bucketName = process.env.IMAGE_BUCKET_NAME;
+const originalBucketName = process.env.IMAGE_BUCKET_NAME;
+const resizedBucketName = process.env.RESIZED_IMAGE_BUCKET_NAME;
+
+// helper to resize images
+const sharpResize = (imageBuffer, width) =>
+  sharp(imageBuffer)
+    .resize(width)
+    .toBuffer();
+
+// helper to generate resized images
+const generateAvatars = (image) => {
+  const size100 = sharpResize(image, 100);
+  const size210 = sharpResize(image, 210);
+  const size500 = sharpResize(image, 500);
+  const size900 = sharpResize(image, 900);
+
+  return Promise.all([size100, size210, size500, size900]);
+};
 
 // uploads an image
 const uploadImage = (event, callback) => {
   const uid = uuidV1();
-  const { naId, email, recordGroup, entry, stack, row, compartment, containerId, timestamp, title, box, shelf } = event.body;
+  const { location } = event.body || 'nara';
+  const { docId, email, recordGroup, entry, stack, row, compartment, containerId, timestamp, title, box, shelf } = event.body;
   const image = new Buffer(event.body.file.replace(/^data:image\/(png|jpeg);base64,/, ''), 'base64');
   const s3Params = {
     Bucket: bucketName,
-    Key: `nara/${naId}/${uid}-${timestamp}.jpg`,
+    Key: `${location}/${docId}/${uid}.jpg`,
     Body: image,
   };
+
+  const resizeAndUpload = () => generateAvatars(image)
+    .then([size100, size210, size500, size900] => [
+    {
+      Bucket: resizedBucketName,
+      Key: `${location}/${docId}/${uid}@xsmall.jpg`,
+      Body: size100,
+    },
+    {
+      Bucket: resizedBucketName,
+      Key: `${location}/${docId}/${uid}@small.jpg`,
+      Body: size210,
+    },
+    {
+      Bucket: resizedBucketName,
+      Key: `${location}/${docId}/${uid}@medium.jpg`,
+      Body: size500,
+    },
+    {
+      Bucket: resizedBucketName,
+      Key: `${location}/${docId}/xs-${uid}@large.jpg`,
+      Body: size900,
+    }
+  ])
+  .then(resizeS3Params => Promise.all(resizeS3Params.map(param => s3.putObject(param).promise())));
 
   const dbParams = {
         TableName: dynamoTable,
         Item: {
             uid,
+            location,
+            docId,
             email,
             recordGroup,
             entry,
@@ -35,16 +81,20 @@ const uploadImage = (event, callback) => {
             box,
             shelf,
             ocr: [],
-            bucket: bucketName,
-            key: s3Params.Key,
+            originalUrl: `https://s3.amazonaws.com/${originalBucketName}/${s3Params.Key}`,
+            xsmallUrl: `https://s3.amazonaws.com/${resizedBucketName}/${location}/${docId}/${uid}@xsmall.jpg`,
+            smallUrl: `https://s3.amazonaws.com/${resizedBucketName}/${location}/${docId}/${uid}@small.jpg`,
+            mediumUrl: `https://s3.amazonaws.com/${resizedBucketName}/${location}/${docId}/${uid}@medium.jpg`,
+            largeUrl: `https://s3.amazonaws.com/${resizedBucketName}/${location}/${docId}/${uid}@large.jpg`,
         }
     };
 
 
   return s3.putObject(s3Params).promise()
     .then(() => dynamo.put(dbParams).promise())
+    .then(resizeAndUpload)
     .then(() => {
-      console.log('image successfully uploaded to s3 and data stored in dynamo');
+      console.log('image successfully uploaded to s3, data stored in dynamo and resized');
       callback(null, { success: true })
     })
     .catch((err) => {

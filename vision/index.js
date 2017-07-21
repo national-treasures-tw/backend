@@ -15,9 +15,8 @@ const bucketName = process.env.IMAGE_BUCKET_NAME;
 const dynamoTable = process.env.TABLE_NAME;
 
 const getUIDFromS3Key = (key) => {
-  const keyArray = key.split('-');
-  const arayWithTimestampRemoved = keyArray.splice(0, keyArray.length - 1).join('-').split('/');
-  return arayWithTimestampRemoved[arayWithTimestampRemoved.length - 1];
+  const keyArray = key.split('/');
+  return keyArray[keyArray.length - 1];
 };
 
 const getOCR = (event, callback) => {
