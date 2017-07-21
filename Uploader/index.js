@@ -18,12 +18,12 @@ const sharpResize = (imageBuffer, width) =>
 
 // helper to generate resized images
 const generateAvatars = (image) => {
-  const size100 = sharpResize(image, 100);
+  // const size100 = sharpResize(image, 100);
   const size210 = sharpResize(image, 210);
-  const size500 = sharpResize(image, 500);
+  // const size500 = sharpResize(image, 500);
   const size900 = sharpResize(image, 900);
 
-  return Promise.all([size100, size210, size500, size900]);
+  return Promise.all([size210, size900]);
 };
 
 // uploads an image
@@ -33,32 +33,35 @@ const uploadImage = (event, callback) => {
   const { docId, email, recordGroup, entry, stack, row, compartment, containerId, timestamp, title, box, shelf } = event.body;
   const image = new Buffer(event.body.file.replace(/^data:image\/(png|jpeg);base64,/, ''), 'base64');
   const s3Params = {
-    Bucket: bucketName,
+    Bucket: originalBucketName,
     Key: `${location}/${docId}/${uid}.jpg`,
     Body: image,
+    ContentType: 'image/jpeg'
   };
 
   const resizeAndUpload = () => generateAvatars(image)
-    .then([size100, size210, size500, size900] => [
-    {
-      Bucket: resizedBucketName,
-      Key: `${location}/${docId}/${uid}@xsmall.jpg`,
-      Body: size100,
-    },
+    .then(([size210, size900]) => [
+    // {
+    //   Bucket: resizedBucketName,
+    //   Key: `${location}/${docId}/${uid}@xsmall.jpg`,
+    //   Body: size100,
+    // },
     {
       Bucket: resizedBucketName,
       Key: `${location}/${docId}/${uid}@small.jpg`,
       Body: size210,
+      ContentType: 'image/jpeg'
     },
+    // {
+    //   Bucket: resizedBucketName,
+    //   Key: `${location}/${docId}/${uid}@medium.jpg`,
+    //   Body: size500,
+    // },
     {
       Bucket: resizedBucketName,
-      Key: `${location}/${docId}/${uid}@medium.jpg`,
-      Body: size500,
-    },
-    {
-      Bucket: resizedBucketName,
-      Key: `${location}/${docId}/xs-${uid}@large.jpg`,
+      Key: `${location}/${docId}/${uid}@large.jpg`,
       Body: size900,
+      ContentType: 'image/jpeg'
     }
   ])
   .then(resizeS3Params => Promise.all(resizeS3Params.map(param => s3.putObject(param).promise())));
@@ -82,9 +85,9 @@ const uploadImage = (event, callback) => {
             shelf,
             ocr: [],
             originalUrl: `https://s3.amazonaws.com/${originalBucketName}/${s3Params.Key}`,
-            xsmallUrl: `https://s3.amazonaws.com/${resizedBucketName}/${location}/${docId}/${uid}@xsmall.jpg`,
+            // xsmallUrl: `https://s3.amazonaws.com/${resizedBucketName}/${location}/${docId}/${uid}@xsmall.jpg`,
             smallUrl: `https://s3.amazonaws.com/${resizedBucketName}/${location}/${docId}/${uid}@small.jpg`,
-            mediumUrl: `https://s3.amazonaws.com/${resizedBucketName}/${location}/${docId}/${uid}@medium.jpg`,
+            // mediumUrl: `https://s3.amazonaws.com/${resizedBucketName}/${location}/${docId}/${uid}@medium.jpg`,
             largeUrl: `https://s3.amazonaws.com/${resizedBucketName}/${location}/${docId}/${uid}@large.jpg`,
         }
     };
@@ -103,27 +106,6 @@ const uploadImage = (event, callback) => {
     });
 };
 
-const getImage = (key, callback) => {
-  // if no params specified, return original size avatar
-  const s3Params = {
-    Bucket: bucketName,
-    Key: key
-  };
-
-  // get object and immediately write to request
-  s3.getObject(s3Params).promise()
-  .then((data) => {
-    callback(null, {
-      statusCode: '200',
-      body: data.Body,
-      headers: {
-          'Content-Type': 'image/jpeg',
-          'Access-Control-Allow-Origin': '*'
-      },
-    });
-  })
-  .catch(err => console.log(err));
-};
 
 exports.handler = (event, context, callback) => {
   console.log('Received event:', JSON.stringify(event, null, 2));
@@ -132,12 +114,12 @@ exports.handler = (event, context, callback) => {
     statusCode: err ? '400' : '200',
     body: err ? err.message : JSON.stringify(res),
     headers: {
-        'Content-Type': 'application/json',
+        ContentType: 'application/json',
         'Access-Control-Allow-Origin': '*'
     },
   });
 
-  const query = event.queryStringParameters;
+  // const query = event.queryStringParameters;
   // const body = JSON.parse(event.body);
 
   switch (event.httpMethod) {
@@ -145,7 +127,8 @@ exports.handler = (event, context, callback) => {
 
       break;
     case 'GET':
-      getImage(query.key, callback);
+      dynamo.scan({ TableName: dynamoTable }).promise()
+      .then(res => done(null, res.Items));
 
       break;
     case 'POST':

@@ -16,7 +16,7 @@ const dynamoTable = process.env.TABLE_NAME;
 
 const getUIDFromS3Key = (key) => {
   const keyArray = key.split('/');
-  return keyArray[keyArray.length - 1];
+  return keyArray[keyArray.length - 1].split('.')[0];
 };
 
 const getOCR = (event, callback) => {
