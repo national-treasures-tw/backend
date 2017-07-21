@@ -6,7 +6,7 @@ npm-debug.log
 *.DS_Store
 
 // secret stuff
-*.json
+key.json
 
 
 // zip file for lambda
