@@ -15,6 +15,7 @@ const dynamo = new AWS.DynamoDB.DocumentClient();
 const bucketName = process.env.IMAGE_BUCKET_NAME;
 const dynamoTable = process.env.TABLE_NAME;
 const translateLambdaFunctionName = process.env.TRANSLATE_LAMBDA;
+const NLPLambdaFunctionName = process.env.NLP_LAMBDA;
 
 const getUIDFromS3Key = (key) => {
   const keyArray = key.split('/');
@@ -45,18 +46,37 @@ const getOCR = (event, callback) => {
             ocr: detections
           };
 
-          const payload = {
+          const translatePayload = {
               operation: 'TRANSLATE_OCR',
               data: translateData,
           };
 
-          const params = {
+          const translateParams = {
               FunctionName: translateLambdaFunctionName,
               InvocationType: 'Event',
-              Payload: new Buffer(JSON.stringify(payload)),
+              Payload: new Buffer(JSON.stringify(translatePayload)),
           };
 
-          Lambda.invoke(params).promise();
+          Lambda.invoke(translateParams).promise();
+
+          // For GC NLP Lambda
+          const nlpData = {
+            uid,
+            ocr: detections
+          };
+
+          const nlpPayload = {
+              operation: 'NLP_OCR',
+              data: nlpData,
+          };
+
+          const nlpParams = {
+              FunctionName: NLPLambdaFunctionName,
+              InvocationType: 'Event',
+              Payload: new Buffer(JSON.stringify(nlpPayload)),
+          };
+
+          Lambda.invoke(nlpParams).promise();
 
           // save OCR results in image database (dynamodb)
           return dynamo.update({
