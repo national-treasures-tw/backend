@@ -42,6 +42,8 @@ const uploadImage = (event, callback) => {
       box,
       shelf,
       ocr: [],
+      translate: [],
+      nlp: [],
       originalUrl: `https://s3.amazonaws.com/${originalBucketName}/${s3Params.Key}`,
       xsmallUrl: `https://s3.amazonaws.com/${resizedBucketName}/${location}/${docId}/${uid}@xsmall.jpg`,
       smallUrl: `https://s3.amazonaws.com/${resizedBucketName}/${location}/${docId}/${uid}@small.jpg`,

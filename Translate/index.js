@@ -11,7 +11,6 @@ const s3 = new AWS.S3({
   signatureVersion: 'v4', // S3 requires the "v4" signatureVersion to enable KMS server side encryption
 });
 const dynamo = new AWS.DynamoDB.DocumentClient();
-const bucketName = process.env.IMAGE_BUCKET_NAME;
 const dynamoTable = process.env.TABLE_NAME;
 
 const getTranslation = (data, callback) => {

@@ -10,9 +10,11 @@ const s3 = new AWS.S3({
   apiVersion: '2006-03-01', // lock in specific version of the SDK
   signatureVersion: 'v4', // S3 requires the "v4" signatureVersion to enable KMS server side encryption
 });
+const Lambda = new AWS.Lambda({ apiVersion: '2015-03-31' });
 const dynamo = new AWS.DynamoDB.DocumentClient();
 const bucketName = process.env.IMAGE_BUCKET_NAME;
 const dynamoTable = process.env.TABLE_NAME;
+const translateLambdaFunctionName = process.env.TRANSLATE_LAMBDA;
 
 const getUIDFromS3Key = (key) => {
   const keyArray = key.split('/');
@@ -36,6 +38,26 @@ const getOCR = (event, callback) => {
         if (err) {
           console.log(err);
         } else {
+
+          // For GC Translate Lambda
+          const translateData = {
+            uid,
+            ocr: detections
+          };
+
+          const payload = {
+              operation: 'TRANSLATE_OCR',
+              data: translateData,
+          };
+
+          const params = {
+              FunctionName: translateLambdaFunctionName,
+              InvocationType: 'Event',
+              Payload: new Buffer(JSON.stringify(payload)),
+          };
+
+          Lambda.invoke(params).promise();
+
           // save OCR results in image database (dynamodb)
           return dynamo.update({
             Key: { uid },
