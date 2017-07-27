@@ -5,11 +5,11 @@ const s3 = new AWS.S3({
   apiVersion: '2006-03-01', // lock in specific version of the SDK
   signatureVersion: 'v4', // S3 requires the "v4" signatureVersion to enable KMS server side encryption
 });
-const Lambda = new AWS.Lambda({ apiVersion: '2015-03-31' });
 const dynamo = new AWS.DynamoDB.DocumentClient();
 const originalBucketName = process.env.IMAGE_BUCKET_NAME;
 const resizedBucketName = process.env.RESIZED_IMAGE_BUCKET_NAME;
 const resizeLambdaFunctionName = process.env.RESIZE_LAMBDA;
+const { publishResizeJobToSQS } = require('./sqs.js');
 
 // uploads an image
 const uploadImage = (event, callback) => {
@@ -43,7 +43,9 @@ const uploadImage = (event, callback) => {
       shelf,
       ocr: [],
       translate: [],
-      nlp: [],
+      nlpEn: [],
+      nlpZh: [],
+      imageKey: s3Params.Key,
       originalUrl: `https://s3.amazonaws.com/${originalBucketName}/${s3Params.Key}`,
       xsmallUrl: `https://s3.amazonaws.com/${resizedBucketName}/${location}/${docId}/${uid}@xsmall.jpg`,
       smallUrl: `https://s3.amazonaws.com/${resizedBucketName}/${location}/${docId}/${uid}@small.jpg`,
@@ -52,30 +54,11 @@ const uploadImage = (event, callback) => {
     }
   };
 
-  // For Image Resize Lambda
-  const resizeData = {
-    uid,
-    imageKey: s3Params.Key,
-    location,
-    docId
-  };
-
-  const payload = {
-      operation: 'RESIZE_IMAGE',
-      data: resizeData,
-  };
-
-  const params = {
-      FunctionName: resizeLambdaFunctionName,
-      InvocationType: 'Event',
-      Payload: new Buffer(JSON.stringify(payload)),
-  };
-
   return s3.putObject(s3Params).promise()
     .then(() => dynamo.put(dbParams).promise())
+    .then(() => publishResizeJobToSQS(dbParams))
     .then(() => {
       console.log('image successfully uploaded to s3, data stored in dynamo');
-      Lambda.invoke(params).promise();
       callback(null, { success: true })
     })
     .catch((err) => {

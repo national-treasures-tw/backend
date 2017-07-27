@@ -1,0 +1,36 @@
+{
+  "name": "BetterPT-Message-Worker",
+  "version": "0.0.1",
+  "private": true,
+  "description": "A Microservice",
+  "keywords": [],
+  "author": "BetterPT Web Team",
+  "license": "",
+  "main": "app.js",
+  "dependencies": {
+    "aws-sdk": "^2.53.0",
+    "axios": "^0.16.1",
+    "bluebird": "^3.5.0",
+    "bunyan": "^1.8.5",
+    "bunyan-slack": "0.0.10",
+    "jsonwebtoken": "^7.4.1"
+  },
+  "devDependencies": {
+    "chai": "^3.5.0",
+    "chai-shallow-deep-equal": "^1.4.6",
+    "dotenv": "^4.0.0",
+    "eslint": "^3.15.0",
+    "eslint-config-airbnb-base": "^11.1.0",
+    "eslint-plugin-import": "^2.2.0",
+    "eslint-watch": "^2.1.14",
+    "mocha": "^3.2.0",
+    "nock": "^9.0.13",
+    "supertest": "^3.0.0",
+    "swagger": "^0.7.5"
+  },
+  "scripts": {
+    "start": "NODE_ENV=production node app.js",
+    "docker": "sleep 10 && node index.js",
+    "test": "NODE_ENV=test mocha test"
+  }
+}
