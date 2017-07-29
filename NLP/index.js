@@ -1,6 +1,6 @@
 'use strict';
 // TNT-OCR Lambda function v1
-// Google Vision API https://googlecloudplatform.github.io/google-cloud-node/#/docs/vision/0.11.0/vision
+// Google NLP API https://googlecloudplatform.github.io/google-cloud-node/#/docs/language/0.11.0/language
 const Language = require('@google-cloud/language')({
   projectId: process.env.PROJECT_ID,
   keyFilename: process.env.KEY_NAME
