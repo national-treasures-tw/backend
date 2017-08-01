@@ -1,3 +1,18 @@
+/*
+TNT Worker Lambda function
+
+It is to be triggered every interval (1 min or less) to poll SQS queue for job messages
+Upon receiving a message, this worker invokes corresponding lambda functions based on 'type' of message
+and sends neccessary data.
+
+Currently the jobs are
+1. Image-Uploader requests resize of uploaded images
+2. OCR requests translation for OCR results
+3. OCR requests NLP in English for OCR results
+4. Translate requests NLP for Zh-TW OCR results (not worrking due to Langeage library bug, 8/2017)
+
+Note: OCR is not invoked by this worker, instead it is invoked by a new upload event by S3
+*/
 const AWS = require('aws-sdk');
 const SQS = new AWS.SQS({ apiVersion: '2012-11-05' });
 const Lambda = new AWS.Lambda({ apiVersion: '2015-03-31' });
