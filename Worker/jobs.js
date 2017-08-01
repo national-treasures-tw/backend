@@ -1,8 +1,7 @@
 const {
-  getJSONForResizeImage,
-  getJSONForTranlate,
-  getJSONForNLPEn,
-  getJSONForNLPZh
+  getJSONFromMessageResize,
+  getJSONFromMessageTranslate,
+  getJSONFromMessageNLP,
 } = require('./helper.js');
 
 
@@ -12,7 +11,7 @@ const jobs = [
     service: 'Resizer',
     purpose: 'To resize uploaded images',
     type: 'RESIZE_IMAGE',
-    getJSON: getJSONForResizeImage,
+    getJSON: getJSONFromMessageResize,
     lambda: {
       functionName: process.env.RESIZE_LAMBDA
     },
@@ -22,27 +21,17 @@ const jobs = [
     service: 'Translator',
     purpose: 'To translate OCR results',
     type: 'TRANSLATE_OCR',
-    getJSON: getJSONForTranlate,
+    getJSON: getJSONFromMessageTranslate,
     lambda: {
       functionName: process.env.TRANSLATE_LAMBDA
     },
     isActive: true
   },
   {
-    service: 'NLP-EN',
-    purpose: 'To NLP OCR results in English',
-    type: 'NLP_OCR_EN',
-    getJSON: getJSONForNLPEn,
-    lambda: {
-      functionName: process.env.NLP_LAMBDA
-    },
-    isActive: true
-  },
-  {
-    service: 'NLP-ZH',
-    purpose: 'To NLP OCR results in Mandarin',
-    type: 'NLP_OCR_ZH',
-    getJSON: getJSONForNLPZh,
+    service: 'NLP',
+    purpose: 'To NLP OCR results in EN/ZH',
+    type: 'NLP_OCR',
+    getJSON: getJSONFromMessageNLP,
     lambda: {
       functionName: process.env.NLP_LAMBDA
     },

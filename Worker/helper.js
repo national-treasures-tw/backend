@@ -5,38 +5,35 @@ const getType = (message) => {
   return type;
 };
 
-const respawnMessage = (message, childType) => {
-  const { MessageAttributes, Body } = message;
-  const MAKeys = Object.keys(MessageAttributes);
-  let newMessageAttributes = {};
-  MAKeys.forEach((e) => {
-    if (e !== 'type') {
-      newMessageAttributes[e] = { DataType: MessageAttributes[e].DataType, StringValue: MessageAttributes[e].StringValue }
-    } else {
-      newMessageAttributes[e] = { DataType: MessageAttributes[e].DataType, StringValue: childType }
-    }
-  })
+const getJSONFromMessageResize = (message) => {
+  const attributes = message.MessageAttributes || {};
+  const uid = attributes.uid && attributes.uid.StringValue;
+  const imageKey = attributes.imageKey && attributes.imageKey.StringValue;
+  const location = attributes.location && attributes.location.StringValue;
+  const docId = attributes.docId && attributes.docId.StringValue;
 
-  return Object.assign({}, { MessageAttributes: newMessageAttributes, MessageBody: Body }, {
-    QueueUrl: process.env.SQS_QUEUE_URL || 'https://sqs.us-east-1.amazonaws.com/143068653284/BPT-DEV',
-    DelaySeconds: 0
-  });
+  return { uid, imageKey, location, docId };
 };
 
-const getJSONFromMessageNewEmployee = (message) => {
+const getJSONFromMessageTranslate = (message) => {
   const attributes = message.MessageAttributes || {};
-  const email = attributes.email && attributes.email.StringValue;
-  const companyId = attributes.companyId && +attributes.companyId.StringValue;
-  const employeeId = attributes.employeeId && +attributes.employeeId.StringValue;
-  const therapistId = attributes.therapistId && +attributes.therapistId.StringValue;
-  const timezone = attributes.timezone ? attributes.timezone.StringValue : 'America/New_York';
   const uid = attributes.uid && attributes.uid.StringValue;
+  const ocr = attributes.ocr && attributes.ocr.StringValue;
 
-  return { email, companyId, employeeId, therapistId, timezone, uid };
+  return { uid, ocr };
+};
+const getJSONFromMessageNLP = (message) => {
+  const attributes = message.MessageAttributes || {};
+  const uid = attributes.uid && attributes.uid.StringValue;
+  const ocr = attributes.ocr && attributes.ocr.StringValue;
+  const nlpType = attributes.nlpType && attributes.nlpType.StringValue;
+
+  return { uid, ocr, nlpType };
 };
 
 module.exports = {
   getType,
-  respawnMessage,
-  getJSONFromMessageNewEmployee,
+  getJSONFromMessageResize,
+  getJSONFromMessageTranslate,
+  getJSONFromMessageNLP,
 };

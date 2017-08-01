@@ -47,16 +47,13 @@ const uploadImage = (event, callback) => {
       nlpZh: [],
       imageKey: s3Params.Key,
       originalUrl: `https://s3.amazonaws.com/${originalBucketName}/${s3Params.Key}`,
-      xsmallUrl: `https://s3.amazonaws.com/${resizedBucketName}/${location}/${docId}/${uid}@xsmall.jpg`,
-      smallUrl: `https://s3.amazonaws.com/${resizedBucketName}/${location}/${docId}/${uid}@small.jpg`,
-      mediumUrl: `https://s3.amazonaws.com/${resizedBucketName}/${location}/${docId}/${uid}@medium.jpg`,
-      largeUrl: `https://s3.amazonaws.com/${resizedBucketName}/${location}/${docId}/${uid}@large.jpg`,
+      resizedUrls: []
     }
   };
 
   return s3.putObject(s3Params).promise()
     .then(() => dynamo.put(dbParams).promise())
-    .then(() => publishResizeJobToSQS(dbParams))
+    .then(() => publishResizeJobToSQS(dbParams.Item))
     .then(() => {
       console.log('image successfully uploaded to s3, data stored in dynamo');
       callback(null, { success: true })

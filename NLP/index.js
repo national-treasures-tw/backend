@@ -1,7 +1,7 @@
 'use strict';
 // TNT-OCR Lambda function v1
 // Google Vision API https://googlecloudplatform.github.io/google-cloud-node/#/docs/vision/0.11.0/vision
-const Language = require('@google-cloud/language')({
+const Language = require('@google-cloud/language').v1({
   projectId: process.env.PROJECT_ID,
   keyFilename: process.env.KEY_NAME
 });
@@ -14,18 +14,22 @@ const dynamo = new AWS.DynamoDB.DocumentClient();
 const dynamoTable = process.env.TABLE_NAME;
 
 const getLanguage = (data, callback) => {
-  const { ocr, uid } = data;
-  const text = ocr[0];
-  const document = Language.document({ content: text });
+  const { ocr, uid, nlpType } = data;
+  const text = ocr;
+  // const encodingType = Language.types.EncodingType.NONE;
+  const document = { content: text, type: 'PLAIN_TEXT' };
+  const request = {
+      document
+  };
 
-  document.detectEntities()
+  Language.analyzeEntities(request)
   .then((results) => {
     console.log(results);
     return dynamo.update({
       Key: { uid },
       TableName: dynamoTable,
       ReturnValues: 'ALL_NEW',
-      ExpressionAttributeNames: { "#DK": 'nlp' },
+      ExpressionAttributeNames: { "#DK": nlpType },
       ExpressionAttributeValues: { ":d": results },
       UpdateExpression: 'SET #DK = :d'
     }).promise()

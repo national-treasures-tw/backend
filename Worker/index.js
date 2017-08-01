@@ -79,10 +79,12 @@ const poll = (callback) => {
             // complete when all messages have been processed
             Promise.all(promises).then(() => {
                 const result = ` Messages received: ${data.Messages.length}`;
+                console.log(result);
                 callback(null, result);
             })
         } else {
             const result = ' No more messages';
+            console.log(result);
             callback(null, result);
         }
     })

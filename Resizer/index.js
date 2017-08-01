@@ -4,8 +4,10 @@ const s3 = new AWS.S3({
   apiVersion: '2006-03-01', // lock in specific version of the SDK
   signatureVersion: 'v4', // S3 requires the "v4" signatureVersion to enable KMS server side encryption
 });
+const dynamo = new AWS.DynamoDB.DocumentClient();
 const originalBucketName = process.env.IMAGE_BUCKET_NAME;
 const resizedBucketName = process.env.RESIZED_IMAGE_BUCKET_NAME;
+const dynamoTable = process.env.TABLE_NAME;
 
 // helper to resize images
 const sharpResize = (imageBuffer, width) =>
@@ -62,9 +64,26 @@ const resizeImage = (data, callback) => {
   ])
   .then(resizeS3Params => Promise.all(resizeS3Params.map(param => s3.putObject(param).promise())));
 
+  const resizedUrls = {
+    xsmallUrl: `https://s3.amazonaws.com/${resizedBucketName}/${location}/${docId}/${uid}@xsmall.jpg`,
+    smallUrl: `https://s3.amazonaws.com/${resizedBucketName}/${location}/${docId}/${uid}@small.jpg`,
+    mediumUrl: `https://s3.amazonaws.com/${resizedBucketName}/${location}/${docId}/${uid}@medium.jpg`,
+    largeUrl: `https://s3.amazonaws.com/${resizedBucketName}/${location}/${docId}/${uid}@large.jpg`,
+  };
+
+  const dbUpdateParam = {
+    Key: { uid },
+    TableName: dynamoTable,
+    ReturnValues: 'ALL_NEW',
+    ExpressionAttributeNames: { "#DK": 'resizedUrls' },
+    ExpressionAttributeValues: { ":d": resizedUrls },
+    UpdateExpression: 'SET #DK = :d'
+  };
+
   return resizeAndUpload()
+    .then(() => dynamo.update(dbUpdateParam).promise())
     .then(() => {
-      console.log('image successfully resized');
+      console.log('image successfully resized and table updated');
       callback(null, { success: true })
     })
     .catch((err) => {

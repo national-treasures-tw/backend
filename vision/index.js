@@ -17,6 +17,8 @@ const dynamoTable = process.env.TABLE_NAME;
 const translateLambdaFunctionName = process.env.TRANSLATE_LAMBDA;
 const NLPLambdaFunctionName = process.env.NLP_LAMBDA;
 
+const { publishTranslateJobToSQS, publishNLPEnglishJobToSQS } = require('./sqs.js');
+
 const getUIDFromS3Key = (key) => {
   const keyArray = key.split('/');
   return keyArray[keyArray.length - 1].split('.')[0];
@@ -29,10 +31,11 @@ const getOCR = (event, callback) => {
       Bucket: bucketName,
       Key: imageKey
     };
+
     const uid = getUIDFromS3Key(imageKey);
 
     console.log(s3Params);
-    s3.getObject(s3Params).promise()
+    return s3.getObject(s3Params).promise()
     .then((data) => {
       console.log(data);
       vision.detectText(data.Body, function(err, detections) {
@@ -41,42 +44,10 @@ const getOCR = (event, callback) => {
         } else {
 
           // For GC Translate Lambda
-          const translateData = {
+          const dataForLambda = {
             uid,
-            ocr: detections
+            ocr: detections[0]
           };
-
-          const translatePayload = {
-              operation: 'TRANSLATE_OCR',
-              data: translateData,
-          };
-
-          const translateParams = {
-              FunctionName: translateLambdaFunctionName,
-              InvocationType: 'Event',
-              Payload: new Buffer(JSON.stringify(translatePayload)),
-          };
-
-          Lambda.invoke(translateParams).promise();
-
-          // For GC NLP Lambda
-          const nlpData = {
-            uid,
-            ocr: detections
-          };
-
-          const nlpPayload = {
-              operation: 'NLP_OCR',
-              data: nlpData,
-          };
-
-          const nlpParams = {
-              FunctionName: NLPLambdaFunctionName,
-              InvocationType: 'Event',
-              Payload: new Buffer(JSON.stringify(nlpPayload)),
-          };
-
-          Lambda.invoke(nlpParams).promise();
 
           // save OCR results in image database (dynamodb)
           return dynamo.update({
@@ -87,6 +58,8 @@ const getOCR = (event, callback) => {
             ExpressionAttributeValues: { ":d": detections },
             UpdateExpression: 'SET #DK = :d'
           }).promise()
+          .then(() => publishTranslateJobToSQS(dataForLambda))
+          .then(() => publishNLPEnglishJobToSQS(dataForLambda))
         }
 
       });

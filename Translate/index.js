@@ -12,15 +12,24 @@ const s3 = new AWS.S3({
 });
 const dynamo = new AWS.DynamoDB.DocumentClient();
 const dynamoTable = process.env.TABLE_NAME;
+const { publishNLPZhTWJobToSQS } = require('./sqs.js');
 
 const getTranslation = (data, callback) => {
   const { ocr, uid } = data;
-  const text = ocr[0];
+  const text = ocr;
   const target = 'zh-TW';
+
+  let dataForLambda;
 
   Translate.translate(text, target)
   .then((results) => {
     console.log(results);
+
+    dataForLambda = {
+      uid,
+      ocr: results[0]
+    };
+
     return dynamo.update({
       Key: { uid },
       TableName: dynamoTable,
@@ -30,6 +39,7 @@ const getTranslation = (data, callback) => {
       UpdateExpression: 'SET #DK = :d'
     }).promise()
   })
+  .then(() => publishNLPZhTWJobToSQS(dataForLambda))
   .then(() => callback(null, { success: true }))
   .catch(err => callback(err));
 
