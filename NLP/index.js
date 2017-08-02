@@ -2,7 +2,7 @@
 // TNT-NLP Lambda function v1
 // Google NLP API https://googlecloudplatform.github.io/google-cloud-node/#/docs/vision/0.11.0/vision
 // This servesless function is to be invoked by the worker upon receiving 'NLP_OCR' message
-const Language = require('@google-cloud/language').v1({
+const Language = require('@google-cloud/language').v1beta2({
   projectId: process.env.PROJECT_ID,
   keyFilename: process.env.KEY_NAME
 });

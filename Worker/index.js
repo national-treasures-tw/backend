@@ -9,7 +9,7 @@ Currently the jobs are
 1. Image-Uploader requests resize of uploaded images
 2. OCR requests translation for OCR results
 3. OCR requests NLP in English for OCR results
-4. Translate requests NLP for Zh-TW OCR results (not worrking due to Langeage library bug, 8/2017)
+4. Translate requests NLP for Zh-TW OCR results
 
 Note: OCR is not invoked by this worker, instead it is invoked by a new upload event by S3
 */

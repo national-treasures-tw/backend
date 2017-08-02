@@ -45,6 +45,9 @@ const uploadImage = (event, callback) => {
       translate: [],
       nlpEn: [],
       nlpZh: [],
+      uploadedBy: 'user-id',
+      isReadyForView: false,
+      primaryTag: 'NONE',
       imageKey: s3Params.Key,
       originalUrl: `https://s3.amazonaws.com/${originalBucketName}/${s3Params.Key}`,
       resizedUrls: []
