@@ -15,7 +15,7 @@ const { publishResizeJobToSQS } = require('./sqs.js');
 const uploadImage = (event, callback) => {
   const uid = uuidV1();
   const { location } = event.body || 'nara';
-  const { docId, email, recordGroup, entry, stack, row, compartment, containerId, timestamp, title, box, shelf } = event.body;
+  const { docId, email, metadata, timestamp, dispatchId, userId } = event.body;
   const image = new Buffer(event.body.file.replace(/^data:image\/(png|jpeg);base64,/, ''), 'base64');
   const s3Params = {
     Bucket: originalBucketName,
@@ -30,22 +30,13 @@ const uploadImage = (event, callback) => {
       uid,
       location,
       docId,
-      email,
-      recordGroup,
-      entry,
-      stack,
-      row,
-      compartment,
-      containerId,
-      timestamp,
-      title,
-      box,
-      shelf,
+      dispatchId,
+      userId,
+      metadata,
       ocr: [],
       translate: [],
       nlpEn: [],
       nlpZh: [],
-      uploadedBy: 'user-id',
       isReadyForView: false,
       primaryTag: 'NONE',
       imageKey: s3Params.Key,
@@ -54,8 +45,32 @@ const uploadImage = (event, callback) => {
     }
   };
 
+  const scanParams = {
+    TableName : 'TNT-Users',
+    FilterExpression : 'uid = :this_userid',
+    ExpressionAttributeValues : {':this_userid' : userId }
+  };
+          // put image up on s3
   return s3.putObject(s3Params).promise()
+    // create a record in db
     .then(() => dynamo.put(dbParams).promise())
+    // scan for user for current score
+    .then(() => ocumentClient.scan(scanParams).promise())
+    // update new score
+    .then((user) => {
+      const seasonString = `season-${new Date().getFullYear()}-${Math.floor(new Date().getMonth() / 3) + 1}`;
+      const currentSeasonScore = user[seasonString] || 0;
+      const totalScore = user['totalScore'] || 0;
+      dynamo.update({
+        Key: { userId },
+        TableName: 'TNT-Users',
+        ReturnValues: 'ALL_NEW',
+        ExpressionAttributeNames: { "#DK": seasonString, "#TS": 'totalScore' },
+        ExpressionAttributeValues: { ":d": currentSeasonScore + 1, ":t": totalScore + 1 },
+        UpdateExpression: 'SET #DK = :d, #TS = :t' 
+      }
+    ).promise())
+    // publish a resize job
     .then(() => publishResizeJobToSQS(dbParams.Item))
     .then(() => {
       console.log('image successfully uploaded to s3, data stored in dynamo');
@@ -95,7 +110,7 @@ exports.handler = (event, context, callback) => {
     case 'POST':
       console.log(event);
 
-      uploadImage(event, callback);
+      uploadImage(event, done);
       break;
     case 'PUT':
       break;

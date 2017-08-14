@@ -4,23 +4,27 @@ const dynamo = new AWS.DynamoDB.DocumentClient();
 
 // dispatches an record from catalog
 const dispatchRecord = (event, callback) => {
-  const { userId } = event.body;
+  const { userId, isTest } = JSON.parse(event.body);
   const params = {
     TableName : 'TNT-Catalog',
     FilterExpression: "attribute_not_exists(isBlocked)",
-    Limit: 10
+    Limit: 50
   };
 
   let chosenRecord;
   // scan the catalog for undispatched records (i.e. is not blocked)
-  documentClient.scan(params).promise()
+  dynamo.scan(params).promise()
   .then((data) => {
-   // pick out a random record
-   const randomIndex = Math.ceil(Math.random() * 10); // 1 ~ 10
-   chosenRecord = data.Items[randomIndex];
+    // pick out a random record
+    const randomIndex = Math.ceil(Math.random() * 10); // 1 ~ 10
+    chosenRecord = data.Items[randomIndex];
 
-   // updated the record { isBlocked: true } so it won't be double dispatched
-   return dynamo.update({
+    if (isTest) {
+      return Promise.resolve();
+    }
+
+    // updated the record { isBlocked: true } so it won't be double dispatched
+    return dynamo.update({
       Key: { uid: chosenRecord.uid },
       TableName: 'TNT-Catalog',
       ReturnValues: 'ALL_NEW',
@@ -32,7 +36,7 @@ const dispatchRecord = (event, callback) => {
   .then(() => {
     // create a db entry for the dispatch
     const dbParams = {
-      TableName: 'TNT-Dispatch',
+      TableName: 'TNT-Dispatcher',
       Item: {
         uid: uuidV1(),
         catalogId: chosenRecord.uid,
@@ -40,7 +44,6 @@ const dispatchRecord = (event, callback) => {
         NAID: chosenRecord.NAID,
         createdAt: new Date().getTime(),
         updatedAt: new Date().getTime(),
-        completedAt: null,
         status: 'dispatched' // enum['dispatched', 'complete', 'incomplete', 'error']
       }
     };
@@ -58,20 +61,21 @@ const dispatchRecord = (event, callback) => {
 };
 
 const updateDispatch = (event, callback) => {
-  const { userId, dispatchId, status } = event.body;
+  const { userId, dispatchId, status } = JSON.parse(event.body);
 
   // query the dispatch
-  dynamo.get({ Key: { uid: dispatchId }, TableName: 'TNT-Dispatch' }).promise()
+  dynamo.get({ Key: { uid: dispatchId }, TableName: 'TNT-Dispatcher' }).promise()
   .then((result) => {
     const dispatch = result.Item;
+    if (dispatch.userId !== userId) throw Error('Impermissible action');
 
     return dynamo.update({
        Key: { uid: dispatchId },
-       TableName: 'TNT-Dispatch',
+       TableName: 'TNT-Dispatcher',
        ReturnValues: 'ALL_NEW',
-       ExpressionAttributeNames: { "#DK": 'status' },
-       ExpressionAttributeValues: { ":d": status },
-       UpdateExpression: 'SET #DK = :d'
+       ExpressionAttributeNames: { "#DK": 'status', '#UA': 'updatedAt' },
+       ExpressionAttributeValues: { ":d": status, ":u": new Date().getTime() },
+       UpdateExpression: 'SET #DK = :d, #UA = :u'
      }).promise();
 
   })
@@ -103,14 +107,12 @@ exports.handler = (event, context, callback) => {
 
       break;
     case 'POST':
-      console.log(event);
 
-      dispatchRecord(event, callback);
+      dispatchRecord(event, done);
       break;
     case 'PUT':
-      console.log(event);
 
-      updateDispatch(event, callback);
+      updateDispatch(event, done);
       break;
     default:
       done(new Error(`Unsupported method "${event.httpMethod}"`));
