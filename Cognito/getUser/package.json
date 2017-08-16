@@ -1,0 +1,15 @@
+{
+  "name": "getuser",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "zip": "rm getUser.zip && zip -r getUser.zip ."
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "jwt-decode": "^2.2.0"
+  }
+}

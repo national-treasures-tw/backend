@@ -1,3 +1,6 @@
+// This is a single lambda auto confirming user signup via cognito
+// http://docs.aws.amazon.com/cognito/latest/developerguide/cognito-user-identity-pools-working-with-aws-lambda-triggers.html
+
 const AWS = require('aws-sdk');
 const dynamoTable = process.env.TABLE_NAME;
 const dynamo = new AWS.DynamoDB.DocumentClient();
