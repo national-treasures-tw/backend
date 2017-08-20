@@ -35,10 +35,12 @@ const dispatchRecord = (event, callback) => {
   })
   .then(() => {
     // create a db entry for the dispatch
+    const uid = uuidV1();
+    chosenRecord.dispatchId = uid;
     const dbParams = {
       TableName: 'TNT-Dispatcher',
       Item: {
-        uid: uuidV1(),
+        uid,
         catalogId: chosenRecord.uid,
         userId,
         NAID: chosenRecord.NAID,

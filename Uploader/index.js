@@ -14,7 +14,7 @@ const { publishResizeJobToSQS } = require('./sqs.js');
 // uploads an image
 const uploadImage = (event, callback) => {
   const uid = uuidV1();
-  const { docId, email, metadata, timestamp, dispatchId, userId, location } = event.body;
+  const { docId, email, metadata, timestamp, dispatchId, userId, location, isNotDocument } = event.body;
   const image = new Buffer(event.body.file.replace(/^data:image\/(png|jpeg);base64,/, ''), 'base64');
   const s3Params = {
     Bucket: originalBucketName,
@@ -32,6 +32,8 @@ const uploadImage = (event, callback) => {
       dispatchId,
       userId,
       metadata,
+      timestamp,
+      isNotDocument,
       ocr: [],
       translate: [],
       nlpEn: [],
@@ -46,7 +48,7 @@ const uploadImage = (event, callback) => {
 
   const scanParams = {
     TableName : 'TNT-Users',
-    FilterExpression : 'uid = :this_userid',
+    FilterExpression : 'userId = :this_userid',
     ExpressionAttributeValues : {':this_userid' : userId }
   };
           // put image up on s3
@@ -54,21 +56,22 @@ const uploadImage = (event, callback) => {
     // create a record in db
     .then(() => dynamo.put(dbParams).promise())
     // scan for user for current score
-    .then(() => ocumentClient.scan(scanParams).promise())
+    .then(() => dynamo.scan(scanParams).promise())
     // update new score
-    .then((user) => {
+    .then((res) => {
+      const user = res.Items[0];
       const seasonString = `season${new Date().getFullYear()}${Math.floor(new Date().getMonth() / 3) + 1}`;
       const currentSeasonScore = user[seasonString] || 0;
       const totalScore = user['totalScore'] || 0;
-      dynamo.update({
+      return dynamo.update({
         Key: { userId },
         TableName: 'TNT-Users',
         ReturnValues: 'ALL_NEW',
         ExpressionAttributeNames: { "#DK": seasonString, "#TS": 'totalScore' },
         ExpressionAttributeValues: { ":d": currentSeasonScore + 1, ":t": totalScore + 1 },
         UpdateExpression: 'SET #DK = :d, #TS = :t'
-      }
-    ).promise())
+      }).promise()
+    })
     // publish a resize job
     .then(() => publishResizeJobToSQS(dbParams.Item))
     .then(() => {

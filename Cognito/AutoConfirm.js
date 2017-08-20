@@ -28,6 +28,7 @@ exports.handler = function(event, context) {
 
     // create an user record in db
     const { userName, userPoolId, callerContext, request } = event;
+    const seasonString = `season${new Date().getFullYear()}${Math.floor(new Date().getMonth() / 3) + 1}`;
     const dbParams = {
         TableName: dynamoTable,
         Item: {
@@ -37,7 +38,9 @@ exports.handler = function(event, context) {
           nickname: request.userAttributes.nickname,
           email: request.userAttributes.email,
           provider: 'cognito',
-          avatarUrl: null
+          avatarUrl: null,
+          totalScore: 0,
+          [seasonString]: 0
         }
     };
 
