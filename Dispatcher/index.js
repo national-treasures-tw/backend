@@ -5,21 +5,62 @@ const dynamo = new AWS.DynamoDB.DocumentClient();
 // dispatches an record from catalog
 const dispatchRecord = (event, callback) => {
   const { userId, isTest } = JSON.parse(event.body);
-  const params = {
-    TableName : 'TNT-Catalog',
-    FilterExpression: "attribute_not_exists(isBlocked)",
-    Limit: 50
+  let chosenRecord;
+  let hasIncompletePastDispatch = false;
+
+  const scanDispatcherParams = {
+    TableName : 'TNT-Dispatcher',
+    FilterExpression : 'userId = :this_userid',
+    ExpressionAttributeValues : {':this_userid' : userId}
   };
 
-  let chosenRecord;
-  // scan the catalog for undispatched records (i.e. is not blocked)
-  dynamo.scan(params).promise()
+  // 1. we scan dispatch to see if a record has already been dispatched to the user but
+  // has not yet been completed (it could be either a. 'incomplete' or 'dispatched')
+  dynamo.scan(scanDispatcherParams).promise()
   .then((data) => {
-    // pick out a random record
-    const randomIndex = Math.ceil(Math.random() * 10); // 1 ~ 10
-    chosenRecord = data.Items[randomIndex];
+    // we check if any prior dispatched records were not complete
+    const incompletePastDispatches = data.Items.filter(dispatch => dispatch.status !== 'complete');
+    if (incompletePastDispatches.length > 0) {
+      hasIncompletePastDispatch = true;
+      // found past incomplete dispatched record, return catalogId of said record
+      return incompletePastDispatches[0].catalogId;
+    }
+    // no prior record has been dispatched
+    return null;
+  })
+  .then((pastDispatchCatalogId) => {
+
+    if (pastDispatchCatalogId) {
+      const scanCatalogParams = {
+        TableName : 'TNT-Catalog',
+        FilterExpression : 'uid = :this_uid',
+        ExpressionAttributeValues : {':this_uid' : pastDispatchCatalogId}
+      };
+      // using the catalogId, find that past record
+      return dynamo.scan(scanCatalogParams).promise()
+    }
+
+    const params = {
+      TableName : 'TNT-Catalog',
+      FilterExpression: "attribute_not_exists(isBlocked)",
+      Limit: 50
+    };
+
+    // scan the catalog for any undispatched records (i.e. is not blocked)
+    return dynamo.scan(params).promise()
+  })
+  .then((data) => {
+    if (hasIncompletePastDispatch) {
+      // found the old incomplete record, dispatch it
+      chosenRecord = data.Items[0];
+    } else {
+      // or, pick out a random record from the scan
+      const randomIndex = Math.ceil(Math.random() * 10); // 1 ~ 10
+      chosenRecord = data.Items[randomIndex];
+    }
 
     if (isTest) {
+      // if this is for local testing, don't block the record for further dispatching
       return Promise.resolve();
     }
 
@@ -34,7 +75,12 @@ const dispatchRecord = (event, callback) => {
     }).promise();
   })
   .then(() => {
-    // create a db entry for the dispatch
+
+    if (hasIncompletePastDispatch) {
+      // if this record is from a prior dispatch, don't create a db entry in Dispatcher
+      return Promise.resolve();
+    }
+    // create a db entry for the dispatcher
     const uid = uuidV1();
     chosenRecord.dispatchId = uid;
     const dbParams = {
