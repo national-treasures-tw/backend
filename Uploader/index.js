@@ -60,6 +60,11 @@ const uploadImage = (event, callback) => {
     // update new score
     .then((res) => {
       const user = res.Items[0];
+
+      if (!user) {
+        return null;
+      }
+
       const seasonString = `season${new Date().getFullYear()}${Math.floor(new Date().getMonth() / 3) + 1}`;
       const currentSeasonScore = user[seasonString] || 0;
       const totalScore = user['totalScore'] || 0;
@@ -105,7 +110,13 @@ exports.handler = (event, context, callback) => {
 
       break;
     case 'GET':
-      dynamo.scan({ TableName: dynamoTable }).promise()
+      dynamo.scan({
+        TableName: dynamoTable,
+        ExpressionAttributeNames: {
+         '#RU': 'resizedUrls'
+        },
+        ProjectionExpression: '#RU'
+      }).promise()
       .then(res => done(null, res.Items));
 
       break;

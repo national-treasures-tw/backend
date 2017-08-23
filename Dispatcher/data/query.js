@@ -4,24 +4,44 @@ const AWS = require('aws-sdk');
 AWS.config.update({ region: 'us-east-1' });
 const dynamo = new AWS.DynamoDB.DocumentClient();
 
+var params = {
+  TableName : 'TNT-Records',
+  FilterExpression : 'docId = :this_naid',
+  ExpressionAttributeValues : {':this_naid' : '4796188'},
+  ExclusiveStartKey: { uid: '8d5292d0-8689-11e7-a29c-377faae4ace3' }
+};
+
 // var params = {
 //   TableName : 'TNT-Catalog',
-//   FilterExpression : 'uid = :this_naid',
-//   ExpressionAttributeValues : {':this_naid' : 'c2f42a71-7d1b-11e7-947b-efaddd12d530'}
+//   FilterExpression: "attribute_not_exists(isBlocked)",
+//   Limit: 10
 // };
-
-var params = {
-  TableName : 'TNT-Catalog',
-  FilterExpression: "attribute_not_exists(isBlocked)",
-  Limit: 10
-};
 
 var documentClient = new AWS.DynamoDB.DocumentClient();
 
 documentClient.scan(params, function(err, data) {
  if (err) console.log(err);
  // console.log(data);
- console.log(data.Items);
+   console.log(data);
+
+  const items = data.Items;
+  console.log(`deleting ${items.length} items..`);
+
+  const deleteParams = items.map(e => ({
+    DeleteRequest: {
+      Key: { uid: e.uid }
+    }
+  }));
+
+  const params = {
+     RequestItems: {
+       'TNT-Records': deleteParams
+     }
+   };
+
+   return documentClient.batchWrite(params).promise()
+   .then(() => console.log('all done'))
+   .catch(err => console.log(err));
 })
 
 /* Testing inserting new attributes 'dispatchedAt' in the items */

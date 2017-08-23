@@ -38,8 +38,8 @@ const getUser = (event, callback) => {
     // TODO: needs to account for dynamodb pagination (i.e. it scans only part of db in the first go when records are big)
     const seasonRankingParams = {
       TableName : 'TNT-Users',
-      FilterExpression : `${seasonString} > :this_score`,
-      ExpressionAttributeValues : {':this_score' : currentSeasonScore},
+      FilterExpression : `${seasonString} BETWEEN :min_score AND :max_score`,
+      ExpressionAttributeValues : {':max_score' : currentSeasonScore + 10000, ':min_score' : currentSeasonScore - 2000},
       ExpressionAttributeNames: {
        '#NN': 'nickname',
        '#TS': 'totalScore',
