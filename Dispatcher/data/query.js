@@ -6,9 +6,9 @@ const dynamo = new AWS.DynamoDB.DocumentClient();
 
 var params = {
   TableName : 'TNT-Records',
-  FilterExpression : 'docId = :this_naid',
-  ExpressionAttributeValues : {':this_naid' : '4796188'},
-  ExclusiveStartKey: { uid: '8d5292d0-8689-11e7-a29c-377faae4ace3' }
+  FilterExpression : 'primaryTag = :this_naid',
+  ExpressionAttributeValues : {':this_naid' : '中美斷交'},
+  // ExclusiveStartKey: { uid: '58661d00-88fd-11e7-a0de-e3e5df802c1a' }
 };
 
 // var params = {
@@ -23,25 +23,6 @@ documentClient.scan(params, function(err, data) {
  if (err) console.log(err);
  // console.log(data);
    console.log(data);
-
-  const items = data.Items;
-  console.log(`deleting ${items.length} items..`);
-
-  const deleteParams = items.map(e => ({
-    DeleteRequest: {
-      Key: { uid: e.uid }
-    }
-  }));
-
-  const params = {
-     RequestItems: {
-       'TNT-Records': deleteParams
-     }
-   };
-
-   return documentClient.batchWrite(params).promise()
-   .then(() => console.log('all done'))
-   .catch(err => console.log(err));
 })
 
 /* Testing inserting new attributes 'dispatchedAt' in the items */

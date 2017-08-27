@@ -89,6 +89,40 @@ const uploadImage = (event, callback) => {
     });
 };
 
+const getDocs = (event) => {
+  const { tag, limit } = event.queryStringParameters || {};
+  let params = {
+    TableName: dynamoTable,
+    FilterExpression : 'primaryTag = :this_tag',
+    ExpressionAttributeValues : {':this_tag' : tag || '中美斷交'},
+    ExpressionAttributeNames: {
+     '#RU': 'resizedUrls',
+     '#UI': 'uid'
+    },
+    ProjectionExpression: '#RU, #UI'
+  };
+
+  let count = 0;
+  let docs = [];
+
+  const retrieveDocs = (data) => {
+    const items = data.Items;
+    console.log(`getting ${items.length} items..`);
+    count = count + items.length;
+    docs = [...docs, ...items];
+
+    if (data.LastEvaluatedKey && count < (limit || 30)) {
+      params.ExclusiveStartKey = data.LastEvaluatedKey;
+      return dynamo.scan(params).promise().then(retrieveDocs);
+    } else {
+      console.log(`all done getting ${count} items`);
+      return docs;
+    }
+  }
+
+  return dynamo.scan(params).promise().then(retrieveDocs)
+}
+
 
 exports.handler = (event, context, callback) => {
   console.log('Received event:', JSON.stringify(event, null, 2));
@@ -110,14 +144,9 @@ exports.handler = (event, context, callback) => {
 
       break;
     case 'GET':
-      dynamo.scan({
-        TableName: dynamoTable,
-        ExpressionAttributeNames: {
-         '#RU': 'resizedUrls'
-        },
-        ProjectionExpression: '#RU'
-      }).promise()
-      .then(res => done(null, res.Items));
+      getDocs(event)
+      .then(docs => done(null, docs))
+      .catch(err => done(err))
 
       break;
     case 'POST':
