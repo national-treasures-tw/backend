@@ -90,37 +90,44 @@ const uploadImage = (event, callback) => {
 };
 
 const getDocs = (event) => {
-  const { tag, limit } = event.queryStringParameters || {};
-  let params = {
-    TableName: dynamoTable,
-    FilterExpression : 'primaryTag = :this_tag',
-    ExpressionAttributeValues : {':this_tag' : tag || '中美斷交'},
-    ExpressionAttributeNames: {
-     '#RU': 'resizedUrls',
-     '#UI': 'uid'
+  const { tag, limit, lastKey } = event.queryStringParameters || {};
+  let queryGSIParams = {
+    "TableName": dynamoTable,
+    "IndexName": 'primaryTag-timestamp-index',
+    "KeyConditionExpression": "primaryTag = :v_title",
+    "ExpressionAttributeValues": {
+        ":v_title": tag || '中美斷交'
     },
-    ProjectionExpression: '#RU, #UI'
+    "ScanIndexForward": true,
+    Limit: 200,
+    ExclusiveStartKey: lastKey && JSON.parse(lastKey)
   };
 
-  let count = 0;
-  let docs = [];
 
-  const retrieveDocs = (data) => {
-    const items = data.Items;
-    console.log(`getting ${items.length} items..`);
-    count = count + items.length;
-    docs = [...docs, ...items];
+  return dynamo.query(queryGSIParams).promise();
+};
 
-    if (data.LastEvaluatedKey && count < (limit || 30)) {
-      params.ExclusiveStartKey = data.LastEvaluatedKey;
-      return dynamo.scan(params).promise().then(retrieveDocs);
-    } else {
-      console.log(`all done getting ${count} items`);
-      return docs;
+const getSingleDoc = (event) => {
+  const { uid } = event.queryStringParameters || {};
+
+  const params = {
+    TableName: dynamoTable,
+    Key: { uid }
+  };
+
+  return dynamo.get(params).promise();
+}
+
+const deleteDoc = (event, callback) => {
+  const { uid } = JSON.parse(event.body);
+  const params = {
+    TableName : dynamoTable,
+    Key: {
+      uid
     }
-  }
+  };
 
-  return dynamo.scan(params).promise().then(retrieveDocs)
+  return dynamo.delete(params).promise();
 }
 
 
@@ -141,12 +148,22 @@ exports.handler = (event, context, callback) => {
 
   switch (event.httpMethod) {
     case 'DELETE':
+      deleteDoc(event)
+      .then(() => done(null, { success: true }))
+      .catch(err => done(err))
 
       break;
     case 'GET':
-      getDocs(event)
-      .then(docs => done(null, docs))
-      .catch(err => done(err))
+      const { uid } = event.queryStringParameters || {};
+      if (uid) {
+        getSingleDoc(event)
+        .then(data => done(null, data))
+        .catch(err => done(err))
+      } else {
+        getDocs(event)
+        .then(data => done(null, data))
+        .catch(err => done(err))
+      }
 
       break;
     case 'POST':

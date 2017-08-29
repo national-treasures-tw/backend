@@ -11,6 +11,20 @@ var params = {
   // ExclusiveStartKey: { uid: '58661d00-88fd-11e7-a0de-e3e5df802c1a' }
 };
 
+const queryGSIParams = {
+    "TableName": 'TNT-Records',
+    "IndexName": 'primaryTag-timestamp-index',
+    "KeyConditionExpression": "primaryTag = :v_title",
+    "ExpressionAttributeValues": {
+        ":v_title": '美援'
+    },
+    "ScanIndexForward": true,
+    ExclusiveStartKey: { uid: 'c4334110-8903-11e7-b357-df32cda057f3',
+     primaryTag: '美援',
+     timestamp: 1503601759 }
+    // Limit: 500
+};
+
 // var params = {
 //   TableName : 'TNT-Catalog',
 //   FilterExpression: "attribute_not_exists(isBlocked)",
@@ -19,10 +33,11 @@ var params = {
 
 var documentClient = new AWS.DynamoDB.DocumentClient();
 
-documentClient.scan(params, function(err, data) {
+documentClient.query(queryGSIParams, function(err, data) {
  if (err) console.log(err);
  // console.log(data);
-   console.log(data);
+  console.log(data);
+
 })
 
 /* Testing inserting new attributes 'dispatchedAt' in the items */
