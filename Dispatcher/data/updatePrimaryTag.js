@@ -4,14 +4,22 @@ const dynamo = new AWS.DynamoDB.DocumentClient();
 var documentClient = new AWS.DynamoDB.DocumentClient();
 
 // const dispatchId = '389ebfc0-88dc-11e7-96da-1363661d799d';
-const primaryTag = "美援";
-const startYear = 1950;
-const endYear = 1954;
+const primaryTag = "聯合國";
+const startYear = 0;
+const endYear = 0;
 
-let params = {
+let _params = {
   TableName : 'TNT-Records',
   FilterExpression : 'docId = :this_naid',
   ExpressionAttributeValues : {':this_naid' : '1949719' },
+  ExclusiveStartKey: null
+};
+
+let params = {
+  TableName : 'TNT-Records',
+  ExpressionAttributeNames : {'#L' : 'location' },
+  FilterExpression : '#L = :this_naid',
+  ExpressionAttributeValues : {':this_naid' : 'UN' },
   ExclusiveStartKey: null
 };
 
@@ -21,7 +29,7 @@ const updateDocs = (data) => {
   const items = data.Items;
   console.log(`updating ${items.length} items..`);
   count = count + items.length;
-  const NAIDUpdatePromises = items.map(e => dynamo.update({
+  const NAIDUpdatePromises = items.map(e => e.primaryTag === primaryTag ? Promise.resolve() : dynamo.update({
     Key: { uid: e.uid },
     TableName: 'TNT-Records',
     ReturnValues: 'ALL_NEW',
@@ -35,7 +43,7 @@ const updateDocs = (data) => {
     console.log('this batch done');
     if (data.LastEvaluatedKey) {
       params.ExclusiveStartKey = data.LastEvaluatedKey;
-      return documentClient.scan(params).promise().then(updateDocs);
+      return setTimeout(() => documentClient.scan(params).promise().then(updateDocs), Math.random() * 10000);
     } else {
       return console.log(`all done processing ${count} items`);
     }
