@@ -80,7 +80,7 @@ const uploadImage = (event, callback) => {
     // publish a resize job
     .then(() => publishResizeJobToSQS(dbParams.Item))
     .then(() => {
-      console.log('image successfully uploaded to s3, data stored in dynamo');
+      // console.log('image successfully uploaded to s3, data stored in dynamo');
       callback(null, { success: true })
     })
     .catch((err) => {
@@ -93,13 +93,13 @@ const getDocs = (event) => {
   const { tag, limit, lastKey } = event.queryStringParameters || {};
   let queryGSIParams = {
     "TableName": dynamoTable,
-    "IndexName": 'primaryTag-timestamp-index',
+    "IndexName": 'TagIndex',
     "KeyConditionExpression": "primaryTag = :v_title",
     "ExpressionAttributeValues": {
         ":v_title": tag || '中美斷交'
     },
     "ScanIndexForward": true,
-    Limit: 200,
+    Limit: limit || 200,
     ExclusiveStartKey: lastKey && JSON.parse(lastKey)
   };
 
@@ -132,7 +132,7 @@ const deleteDoc = (event, callback) => {
 
 
 exports.handler = (event, context, callback) => {
-  console.log('Received event:', JSON.stringify(event, null, 2));
+  // console.log('Received event:', JSON.stringify(event, null, 2));
 
   const done = (err, res) => callback(null, {
     statusCode: err ? '400' : '200',
@@ -167,7 +167,7 @@ exports.handler = (event, context, callback) => {
 
       break;
     case 'POST':
-      console.log(event);
+      // console.log(event);
 
       uploadImage(event, done);
       break;
