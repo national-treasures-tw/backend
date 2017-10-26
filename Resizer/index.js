@@ -9,11 +9,25 @@ const originalBucketName = process.env.IMAGE_BUCKET_NAME;
 const resizedBucketName = process.env.RESIZED_IMAGE_BUCKET_NAME;
 const dynamoTable = process.env.TABLE_NAME;
 
+
 // helper to resize images
-const sharpResize = (imageBuffer, width) =>
-  sharp(imageBuffer)
-    .resize(width)
-    .toBuffer();
+const sharpResize = (imageBuffer, width) => {
+  const img = sharp(imageBuffer);
+  return img
+  .metadata()
+  .then(metadata => {
+      if (metadata.width > metadata.height) {
+        return img
+          .rotate(90)
+          .resize(width)
+          .toBuffer();
+      } else {
+        return img
+          .resize(width)
+          .toBuffer();
+      }
+  })
+}
 
 // helper to generate resized images
 const generateAvatars = (image) => {
@@ -21,8 +35,9 @@ const generateAvatars = (image) => {
   const size210 = sharpResize(image, 210);
   const size500 = sharpResize(image, 500);
   const size900 = sharpResize(image, 900);
+  const size1600 = sharpResize(image, 1600);
 
-  return Promise.all([size100, size210, size500, size900]);
+  return Promise.all([size100, size210, size500, size900, size1600]);
 };
 
 // resizes an image
@@ -36,7 +51,7 @@ const resizeImage = (data, callback) => {
 
   const resizeAndUpload = () => s3.getObject(s3Params).promise()
   .then(data => generateAvatars(data.Body))
-  .then(([size100, size210, size500, size900]) => [
+  .then(([size100, size210, size500, size900, size1600]) => [
     {
       Bucket: resizedBucketName,
       Key: `${location}/${docId}/${uid}@xsmall.jpg`,
@@ -60,6 +75,12 @@ const resizeImage = (data, callback) => {
       Key: `${location}/${docId}/${uid}@large.jpg`,
       Body: size900,
       ContentType: 'image/jpeg'
+    },
+    {
+      Bucket: resizedBucketName,
+      Key: `${location}/${docId}/${uid}@xlarge.jpg`,
+      Body: size1600,
+      ContentType: 'image/jpeg'
     }
   ])
   .then(resizeS3Params => Promise.all(resizeS3Params.map(param => s3.putObject(param).promise())));
@@ -69,6 +90,7 @@ const resizeImage = (data, callback) => {
     smallUrl: `https://s3.amazonaws.com/${resizedBucketName}/${location}/${docId}/${uid}@small.jpg`,
     mediumUrl: `https://s3.amazonaws.com/${resizedBucketName}/${location}/${docId}/${uid}@medium.jpg`,
     largeUrl: `https://s3.amazonaws.com/${resizedBucketName}/${location}/${docId}/${uid}@large.jpg`,
+    xlargeUrl: `https://s3.amazonaws.com/${resizedBucketName}/${location}/${docId}/${uid}@xlarge.jpg`,
   };
 
   const dbUpdateParam = {

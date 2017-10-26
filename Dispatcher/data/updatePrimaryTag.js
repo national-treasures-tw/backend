@@ -3,25 +3,25 @@ AWS.config.update({ region: 'us-east-1' });
 const dynamo = new AWS.DynamoDB.DocumentClient();
 var documentClient = new AWS.DynamoDB.DocumentClient();
 
-// const dispatchId = '389ebfc0-88dc-11e7-96da-1363661d799d';
-const primaryTag = "聯合國";
-const startYear = 0;
-const endYear = 0;
-
-let _params = {
-  TableName : 'TNT-Records',
-  FilterExpression : 'docId = :this_naid',
-  ExpressionAttributeValues : {':this_naid' : '1949719' },
-  ExclusiveStartKey: null
-};
+// const userId = '2bb4a052-a2e4-4082-b416-ed1baee87e92';
+const primaryTag = "美援";
+const startYear = 1959;
+const endYear = 1960;
 
 let params = {
   TableName : 'TNT-Records',
-  ExpressionAttributeNames : {'#L' : 'location' },
-  FilterExpression : '#L = :this_naid',
-  ExpressionAttributeValues : {':this_naid' : 'UN' },
+  FilterExpression : 'docId = :this_naid',
+  ExpressionAttributeValues : {':this_naid' : '2813719' },
   ExclusiveStartKey: null
 };
+
+// let params = {
+//   TableName : 'TNT-Records',
+//   ExpressionAttributeNames : {'#L' : 'location' },
+//   FilterExpression : '#L = :this_naid',
+//   ExpressionAttributeValues : {':this_naid' : 'UN' },
+//   ExclusiveStartKey: null
+// };
 
 let count = 0;
 
@@ -40,10 +40,10 @@ const updateDocs = (data) => {
 
   return Promise.all(NAIDUpdatePromises)
   .then(() => {
-    console.log('this batch done');
+    console.log('✓');
     if (data.LastEvaluatedKey) {
       params.ExclusiveStartKey = data.LastEvaluatedKey;
-      return setTimeout(() => documentClient.scan(params).promise().then(updateDocs), Math.random() * 10000);
+      return setTimeout(() => documentClient.scan(params).promise().then(updateDocs), Math.random() * 900);
     } else {
       return console.log(`all done processing ${count} items`);
     }

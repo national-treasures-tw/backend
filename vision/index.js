@@ -58,7 +58,7 @@ const getOCR = (event, callback) => {
             ExpressionAttributeValues: { ":d": detections },
             UpdateExpression: 'SET #DK = :d'
           }).promise()
-          .then(() => publishTranslateJobToSQS(dataForLambda))
+          // .then(() => publishTranslateJobToSQS(dataForLambda))
           .then(() => publishNLPEnglishJobToSQS(dataForLambda))
         }
 

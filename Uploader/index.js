@@ -39,7 +39,7 @@ const uploadImage = (event, callback) => {
       nlpEn: [],
       nlpZh: [],
       isReadyForView: false,
-      primaryTag: 'NONE',
+      primaryTag: (new Date()).toString().substr(0, 10),
       imageKey: s3Params.Key,
       originalUrl: `https://s3.amazonaws.com/${originalBucketName}/${s3Params.Key}`,
       resizedUrls: []

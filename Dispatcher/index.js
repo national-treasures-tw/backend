@@ -7,6 +7,7 @@ const dispatchRecord = (event, callback) => {
   const { userId, isTest } = JSON.parse(event.body);
   let chosenRecord;
   let hasIncompletePastDispatch = false;
+  let pastDispatchId = null;
 
   const scanDispatcherParams = {
     TableName : 'TNT-Dispatcher',
@@ -22,6 +23,7 @@ const dispatchRecord = (event, callback) => {
     const incompletePastDispatches = data.Items.filter(dispatch => dispatch.status !== 'complete');
     if (incompletePastDispatches.length > 0) {
       hasIncompletePastDispatch = true;
+      pastDispatchId = incompletePastDispatches[0].uid;
       // found past incomplete dispatched record, return catalogId of said record
       return incompletePastDispatches[0].catalogId;
     }
@@ -78,6 +80,7 @@ const dispatchRecord = (event, callback) => {
 
     if (hasIncompletePastDispatch) {
       // if this record is from a prior dispatch, don't create a db entry in Dispatcher
+      chosenRecord.dispatchId = pastDispatchId;
       return Promise.resolve();
     }
     // create a db entry for the dispatcher
