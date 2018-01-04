@@ -18,13 +18,13 @@ const queryGSIParams = {
     "KeyConditionExpression": "primaryTag = :v_title",
     "FilterExpression" : 'userId = :this_user',
     "ExpressionAttributeValues": {
-        ":v_title": '美援',
-        ":this_user": '48d3bab0-565d-4126-b79b-eef014aabed5'
+        ":v_title": 'Thu Oct 26',
+        ":this_user": 'ac60712f-205f-4402-ab82-5bed026e321d'
     },
     "ScanIndexForward": true,
-    ExclusiveStartKey: { uid: 'd23585f0-89d2-11e7-93c8-8f4157e13757',
-     primaryTag: '美援',
-     timestamp: 1503692399 }
+    // ExclusiveStartKey:  { uid: 'bfcd6c50-ba8f-11e7-864d-e75578acc181',
+    //  primaryTag: 'Thu Oct 26',
+    //  timestamp: 1509051182 }
     // Limit: 500
 };
 
@@ -41,28 +41,30 @@ documentClient.query(queryGSIParams, function(err, data) {
  // console.log(data);
   const originalItemsCount = data.Items.length;
   const f = data.Items;
-  const filterItems = data.Items.filter((e, i) => i !== 0 && e.timestamp - f[i - 1].timestamp < 4);
+  const filterItems = data.Items.filter((e, i) => i !== 0 && e.timestamp - f[i - 1].timestamp < 1);
   const possibleDuplicateCount = filterItems.length;
+  // console.log(filterItems);
+  // console.log('========')
   console.log(data);
   console.log(`Possible Duplicate Count is ${possibleDuplicateCount}`);
-  const deleteParams = filterItems.map(e => ({
-     DeleteRequest: {
-       Key: { uid: e.uid }
-     }
-   }));
-
-    const chunkedParas = _.chunk(deleteParams, 25);
-
-    const chunkedPromises = chunkedParas.map((chunk) => {
-    	const params = {
-    		RequestItems: {
-    			'TNT-Records': chunk
-    		}
-    	};
-    	return dynamo.batchWrite(params).promise();
-    });
-
-    return Promise.all(chunkedPromises)
-    .then(res => console.log(res))
-    .catch(err => console.log(err))
+  // const deleteParams = filterItems.map(e => ({
+  //    DeleteRequest: {
+  //      Key: { uid: e.uid }
+  //    }
+  //  }));
+  //
+  //   const chunkedParas = _.chunk(deleteParams, 25);
+  //
+  //   const chunkedPromises = chunkedParas.map((chunk) => {
+  //   	const params = {
+  //   		RequestItems: {
+  //   			'TNT-Records': chunk
+  //   		}
+  //   	};
+  //   	return dynamo.batchWrite(params).promise();
+  //   });
+  //
+  //   return Promise.all(chunkedPromises)
+  //   .then(res => console.log(res))
+  //   .catch(err => console.log(err))
 })

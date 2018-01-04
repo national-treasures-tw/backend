@@ -4,14 +4,14 @@ const dynamo = new AWS.DynamoDB.DocumentClient();
 var documentClient = new AWS.DynamoDB.DocumentClient();
 
 // const userId = '2bb4a052-a2e4-4082-b416-ed1baee87e92';
-const primaryTag = "美援";
-const startYear = 1959;
-const endYear = 1960;
+const primaryTag = "經貿相關";
+const startYear = 1948;
+const endYear = 1952;
 
 let params = {
   TableName : 'TNT-Records',
   FilterExpression : 'docId = :this_naid',
-  ExpressionAttributeValues : {':this_naid' : '2813719' },
+  ExpressionAttributeValues : {':this_naid' : '1633947' },
   ExclusiveStartKey: null
 };
 
@@ -43,7 +43,7 @@ const updateDocs = (data) => {
     console.log('✓');
     if (data.LastEvaluatedKey) {
       params.ExclusiveStartKey = data.LastEvaluatedKey;
-      return setTimeout(() => documentClient.scan(params).promise().then(updateDocs), Math.random() * 900);
+      return setTimeout(() => documentClient.scan(params).promise().then(updateDocs), Math.random() * 700);
     } else {
       return console.log(`all done processing ${count} items`);
     }

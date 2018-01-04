@@ -90,19 +90,39 @@ const uploadImage = (event, callback) => {
 };
 
 const getDocs = (event) => {
-  const { tag, limit, lastKey } = event.queryStringParameters || {};
-  let queryGSIParams = {
-    "TableName": dynamoTable,
-    "IndexName": 'TagIndex',
-    "KeyConditionExpression": "primaryTag = :v_title",
-    "ExpressionAttributeValues": {
-        ":v_title": tag || '中美斷交'
-    },
-    "ScanIndexForward": true,
-    Limit: limit || 200,
-    ExclusiveStartKey: lastKey && JSON.parse(lastKey)
-  };
-
+  const { tag, limit, lastKey, timestamp, userId } = event.queryStringParameters || {};
+  let queryGSIParams;
+  if (timestamp && userId) {
+    const timestampInt = parseInt(timestamp);
+    queryGSIParams = {
+      "TableName": dynamoTable,
+      "IndexName": 'TagIndex',
+      "KeyConditionExpression": "primaryTag = :v_title and #TS BETWEEN :min_time AND :max_time",
+      "FilterExpression" : "userId = :u_id",
+      "ExpressionAttributeNames": { '#TS': 'timestamp'},
+      "ExpressionAttributeValues": {
+        ":v_title": tag || '中美斷交',
+        ":u_id": userId,
+        ':max_time' : timestampInt + 100000,
+        ':min_time' : timestampInt - 10000
+      },
+      "ScanIndexForward": true,
+      Limit: limit || 1000,
+      ExclusiveStartKey: lastKey && JSON.parse(lastKey)
+    };
+  } else {
+    queryGSIParams = {
+      "TableName": dynamoTable,
+      "IndexName": 'TagIndex',
+      "KeyConditionExpression": "primaryTag = :v_title",
+      "ExpressionAttributeValues": {
+          ":v_title": tag || '中美斷交'
+      },
+      "ScanIndexForward": true,
+      Limit: limit || 1000,
+      ExclusiveStartKey: lastKey && JSON.parse(lastKey)
+    };
+  }
 
   return dynamo.query(queryGSIParams).promise();
 };

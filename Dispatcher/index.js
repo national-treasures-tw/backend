@@ -4,7 +4,7 @@ const dynamo = new AWS.DynamoDB.DocumentClient();
 
 // dispatches an record from catalog
 const dispatchRecord = (event, callback) => {
-  const { userId, isTest } = JSON.parse(event.body);
+  const { userId, userNickname, isTest } = JSON.parse(event.body);
   let chosenRecord;
   let hasIncompletePastDispatch = false;
   let pastDispatchId = null;
@@ -44,8 +44,8 @@ const dispatchRecord = (event, callback) => {
 
     const params = {
       TableName : 'TNT-Catalog',
-      FilterExpression: "attribute_not_exists(isBlocked)",
-      Limit: 50
+      FilterExpression: "attribute_not_exists(isBlocked)"
+      // Limit: 50
     };
 
     // scan the catalog for any undispatched records (i.e. is not blocked)
@@ -92,6 +92,7 @@ const dispatchRecord = (event, callback) => {
         uid,
         catalogId: chosenRecord.uid,
         userId,
+        user: userNickname,
         NAID: chosenRecord.NAID,
         createdAt: new Date().getTime(),
         updatedAt: new Date().getTime(),
