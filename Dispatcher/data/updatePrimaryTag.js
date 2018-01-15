@@ -4,14 +4,14 @@ const dynamo = new AWS.DynamoDB.DocumentClient();
 var documentClient = new AWS.DynamoDB.DocumentClient();
 
 // const userId = '2bb4a052-a2e4-4082-b416-ed1baee87e92';
-const primaryTag = "經貿相關";
-const startYear = 1948;
-const endYear = 1952;
+const primaryTag = "美援";
+const startYear = 1950;
+const endYear = 1954;
 
 let params = {
   TableName : 'TNT-Records',
-  FilterExpression : 'docId = :this_naid',
-  ExpressionAttributeValues : {':this_naid' : '1633947' },
+  FilterExpression : 'dispatchId = :this_naid',
+  ExpressionAttributeValues : {':this_naid' : 'ae6282e0-a2c8-11e7-a13d-777eb5603675' },
   ExclusiveStartKey: null
 };
 
